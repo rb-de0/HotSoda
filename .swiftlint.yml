@@ -1,0 +1,12 @@
+included:
+  - Sources
+  - Tests
+excluded:
+  - .build
+
+line_length:
+  warning: 180
+  error: 300
+
+disabled_rules:
+  - identifier_name 
