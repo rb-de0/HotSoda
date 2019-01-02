@@ -15,7 +15,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         try makeApp()
         _ = try AllProtectedModel().save(on: conn).wait()
 
-        router.protected(AllProtectedModel.self, for: [.create]).post("/", AllProtectedModel.parameter) { _ -> HTTPStatus in
+        router.protected(AllProtectedModel.self, for: [.create]).post("/") { _ -> HTTPStatus in
             return .ok
         }
 
@@ -34,7 +34,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         var response = try waitResponse(.GET, url: "/1")
         XCTAssertEqual(response.http.status, .forbidden)
 
-        response = try waitResponse(.POST, url: "/1")
+        response = try waitResponse(.POST, url: "/")
         XCTAssertEqual(response.http.status, .forbidden)
 
         response = try waitResponse(.PUT, url: "/1")
@@ -49,7 +49,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         try makeApp()
         _ = try NoProtectedModel().save(on: conn).wait()
 
-        router.protected(NoProtectedModel.self, for: [.create]).post("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
+        router.protected(NoProtectedModel.self, for: [.create]).post("/") { request -> NoProtectedModel in
             return try request.requireControllAllowed(NoProtectedModel.self)
         }
 
@@ -69,7 +69,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         XCTAssertEqual(response.http.status, .ok)
         XCTAssertNoThrow(try response.content.syncDecode(NoProtectedModel.self))
 
-        response = try waitResponse(.POST, url: "/1")
+        response = try waitResponse(.POST, url: "/")
         XCTAssertEqual(response.http.status, .ok)
         XCTAssertNoThrow(try response.content.syncDecode(NoProtectedModel.self))
 
@@ -87,7 +87,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         try makeApp()
         _ = try CreateProtectedModel().save(on: conn).wait()
 
-        router.protected(CreateProtectedModel.self, for: [.create]).post("/", CreateProtectedModel.parameter) { request -> CreateProtectedModel in
+        router.protected(CreateProtectedModel.self, for: [.create]).post("/") { request -> CreateProtectedModel in
             return try request.requireControllAllowed(CreateProtectedModel.self)
         }
 
@@ -107,7 +107,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         XCTAssertEqual(response.http.status, .ok)
         XCTAssertNoThrow(try response.content.syncDecode(CreateProtectedModel.self))
 
-        response = try waitResponse(.POST, url: "/1")
+        response = try waitResponse(.POST, url: "/")
         XCTAssertEqual(response.http.status, .forbidden)
         XCTAssertThrowsError(try response.content.syncDecode(CreateProtectedModel.self))
 
@@ -159,19 +159,19 @@ private final class AllProtectedModel: TestModel {
     var id: Int?
     var content: String = ""
 
-    static func canCreate(on request: Request) -> Future<Void> {
+    static func canCreate(on request: Request) throws -> Future<Void> {
         return request.future(error: HotSodaError(abilityType: .create))
     }
 
-    func canRead(on request: Request) -> Future<AllProtectedModel> {
+    func canRead(on request: Request) throws -> Future<AllProtectedModel> {
         return request.future(error: HotSodaError(abilityType: .read))
     }
 
-    func canUpdate(on request: Request) -> Future<AllProtectedModel> {
+    func canUpdate(on request: Request) throws -> Future<AllProtectedModel> {
         return request.future(error: HotSodaError(abilityType: .update))
     }
 
-    func canDelete(on request: Request) -> Future<AllProtectedModel> {
+    func canDelete(on request: Request) throws -> Future<AllProtectedModel> {
         return request.future(error: HotSodaError(abilityType: .delete))
     }
 }
@@ -186,8 +186,8 @@ private final class CreateProtectedModel: TestModel {
     var id: Int?
     var content: String = ""
 
-    static func canCreate(on request: Request) -> Future<Void> {
-        return request.future(error: HotSodaError(abilityType: .create))
+    static func canCreate(on request: Request) throws -> Future<Void> {
+        throw HotSodaError(abilityType: .create)
     }
 }
 
@@ -195,19 +195,19 @@ protocol TestModel: SQLiteModel, Migration, AbilityProtected, Parameter, Content
 
 extension TestModel {
 
-    static func canCreate(on request: Request) -> Future<Void> {
+    static func canCreate(on request: Request) throws -> Future<Void> {
         return request.future(())
     }
 
-    func canRead(on request: Request) -> Future<Self> {
+    func canRead(on request: Request) throws -> Future<Self> {
         return request.future(self)
     }
 
-    func canUpdate(on request: Request) -> Future<Self> {
+    func canUpdate(on request: Request) throws -> Future<Self> {
         return request.future(self)
     }
 
-    func canDelete(on request: Request) -> Future<Self> {
+    func canDelete(on request: Request) throws -> Future<Self> {
         return request.future(self)
     }
 }

@@ -19,15 +19,17 @@ final class AbilityProtectedMiddleware<T: AbilityProtected & Model & Parameter>:
         func verifyRequestAbility(model: T) -> Future<T> {
 
             let abilityCheckTasks = abilityTypesForModel.map { type -> Future<Void> in
-                switch type {
-                case .read:
-                    return model.canRead(on: request).transform(to: ())
-                case .update:
-                    return model.canUpdate(on: request).transform(to: ())
-                case .delete:
-                    return model.canDelete(on: request).transform(to: ())
-                default:
-                    return request.future(())
+                return request.future().flatMap {
+                    switch type {
+                    case .read:
+                        return try model.canRead(on: request).transform(to: ())
+                    case .update:
+                        return try model.canUpdate(on: request).transform(to: ())
+                    case .delete:
+                        return try model.canDelete(on: request).transform(to: ())
+                    default:
+                        return request.future(())
+                    }
                 }
             }
 
@@ -39,26 +41,30 @@ final class AbilityProtectedMiddleware<T: AbilityProtected & Model & Parameter>:
             var verifyTasks = [Future<Void>]()
 
             if shouldVerifyCreateAbility {
-                verifyTasks.append(T.canCreate(on: request))
+                let verifyCreate = request.future()
+                    .flatMap { try T.canCreate(on: request) }
+                verifyTasks.append(verifyCreate)
+            } else {
+                let verifyModelsControl = try request.parameters.next(T.self)
+                    .flatMap { (model: T) -> Future<T> in
+                        verifyRequestAbility(model: model)
+                    }
+                    .flatMap { (model: T) -> Future<T> in
+                        return request.future(try request.cacheControlAllowed(model: model))
+                    }
+                    .transform(to: ())
+                verifyTasks.append(verifyModelsControl)
             }
-
-            let verifyModelsControl = try request.parameters.next(T.self)
-                .flatMap { (model: T) -> Future<T> in
-                    verifyRequestAbility(model: model)
-                }
-                .flatMap { (model: T) -> Future<T> in
-                    return request.future(try request.cacheControlAllowed(model: model))
-                }
-                .transform(to: ())
-
-            verifyTasks.append(verifyModelsControl)
 
             return Future<Void>.andAll(verifyTasks, eventLoop: eventLoop)
         }
 
-        return try verify().flatMap {
-            try next.respond(to: request)
-        }
+        return try verify()
+            .catchFlatMap {
+                request.future(error: HotSodaError.make(from: $0))
+            }.flatMap {
+                try next.respond(to: request)
+            }
     }
 }
 
@@ -75,5 +81,12 @@ private extension Request {
         let cache = try privateContainer.make(HotSodaCache.self)
         cache.set(model)
         return model
+    }
+}
+
+private extension HotSodaError {
+    
+    static func make(from error: Error) -> HotSodaError {
+        return HotSodaError(status: .forbidden, identifier: error.localizedDescription, reason: error.localizedDescription)
     }
 }
