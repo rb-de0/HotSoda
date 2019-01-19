@@ -50,19 +50,19 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         _ = try NoProtectedModel().save(on: conn).wait()
 
         router.protected(NoProtectedModel.self, for: [.create]).post("/") { request -> NoProtectedModel in
-            return try request.requireControllAllowed(NoProtectedModel.self)
+            return try request.requireControllable(NoProtectedModel.self)
         }
 
         router.protected(NoProtectedModel.self, for: [.read]).get("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
-            return try request.requireControllAllowed(NoProtectedModel.self)
+            return try request.requireControllable(NoProtectedModel.self)
         }
 
         router.protected(NoProtectedModel.self, for: [.update]).put("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
-            return try request.requireControllAllowed(NoProtectedModel.self)
+            return try request.requireControllable(NoProtectedModel.self)
         }
 
         router.protected(NoProtectedModel.self, for: [.delete]).delete("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
-            return try request.requireControllAllowed(NoProtectedModel.self)
+            return try request.requireControllable(NoProtectedModel.self)
         }
 
         var response = try waitResponse(.GET, url: "/1")
@@ -88,19 +88,19 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         _ = try CreateProtectedModel().save(on: conn).wait()
 
         router.protected(CreateProtectedModel.self, for: [.create]).post("/") { request -> CreateProtectedModel in
-            return try request.requireControllAllowed(CreateProtectedModel.self)
+            return try request.requireControllable(CreateProtectedModel.self)
         }
 
         router.protected(CreateProtectedModel.self, for: [.read]).get("/", CreateProtectedModel.parameter) { request -> CreateProtectedModel in
-            return try request.requireControllAllowed(CreateProtectedModel.self)
+            return try request.requireControllable(CreateProtectedModel.self)
         }
 
         router.protected(CreateProtectedModel.self, for: [.update]).put("/", CreateProtectedModel.parameter) { request -> CreateProtectedModel in
-            return try request.requireControllAllowed(CreateProtectedModel.self)
+            return try request.requireControllable(CreateProtectedModel.self)
         }
 
         router.protected(CreateProtectedModel.self, for: [.delete]).delete("/", CreateProtectedModel.parameter) { request -> CreateProtectedModel in
-            return try request.requireControllAllowed(CreateProtectedModel.self)
+            return try request.requireControllable(CreateProtectedModel.self)
         }
 
         var response = try waitResponse(.GET, url: "/1")

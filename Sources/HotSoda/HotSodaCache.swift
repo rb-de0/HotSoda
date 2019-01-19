@@ -19,13 +19,13 @@ final class HotSodaCache: Service {
 
 public extension Request {
 
-    func controllAllowed<T>(_ type: T.Type) throws -> T? where T: AbilityProtected {
+    func controllable<T>(_ type: T.Type) throws -> T? where T: AbilityProtected {
         let cache = try privateContainer.make(HotSodaCache.self)
         return cache.get(T.self)
     }
 
-    func requireControllAllowed<T>(_ type: T.Type) throws -> T where T: AbilityProtected {
-        guard let allowed = try controllAllowed(T.self) else {
+    func requireControllable<T>(_ type: T.Type) throws -> T where T: AbilityProtected {
+        guard let allowed = try controllable(T.self) else {
             throw HotSodaError(status: .forbidden, identifier: "model is protected", reason: "model is protected")
         }
         return allowed
