@@ -68,7 +68,7 @@ router.protected(User.self, for: [.create]).post("users", use: UserController().
 Models through middleware is cached, so you can get models as follows without DB connections.
 
 ```Swift
-try request.requireControllAllowed(User.self)
+try request.requireControllable(User.self)
 ```
 
 ## LICENSE
