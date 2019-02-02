@@ -73,6 +73,10 @@ public extension Router {
     func protected<T>(_ subject: T.Type, for types: [AbilityType]) -> Router where T: AbilityProtected, T: Model, T: Parameter, T.ResolvedParameter == Future<T> {
         return grouped(AbilityProtectedMiddleware<T>(for: types))
     }
+
+    func protect<T>(_ subject: T.Type, for types: [AbilityType], configure: (Router) -> Void) where T: AbilityProtected, T: Model, T: Parameter, T.ResolvedParameter == Future<T> {
+        group(AbilityProtectedMiddleware<T>(for: types), configure: configure)
+    }
 }
 
 private extension Request {
