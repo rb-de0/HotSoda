@@ -65,6 +65,14 @@ The model must be conformed `AbilityProtected & Model & Parameter`.
 router.protected(User.self, for: [.create]).post("users", use: UserController().store)
 ```
 
+or
+
+```Swift
+router.protect(User.self, for: [.create]) { router in
+    router.post("users", use: UserController().store)
+}
+```
+
 Models through middleware is cached, so you can get models as follows without DB connections.
 
 ```Swift
