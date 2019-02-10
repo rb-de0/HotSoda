@@ -60,9 +60,7 @@ final class AbilityProtectedMiddleware<T: AbilityProtected & Model & Parameter>:
         }
 
         return try verify()
-            .catchFlatMap {
-                request.future(error: HotSodaError.make(from: $0))
-            }.flatMap {
+            .flatMap {
                 try next.respond(to: request)
             }
     }
@@ -85,12 +83,5 @@ private extension Request {
         let cache = try privateContainer.make(HotSodaCache.self)
         cache.set(model)
         return model
-    }
-}
-
-private extension HotSodaError {
-    
-    static func make(from error: Error) -> HotSodaError {
-        return HotSodaError(status: .forbidden, identifier: error.localizedDescription, reason: error.localizedDescription)
     }
 }
