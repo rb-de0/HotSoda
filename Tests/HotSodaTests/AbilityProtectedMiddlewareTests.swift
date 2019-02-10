@@ -119,15 +119,51 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         XCTAssertEqual(response.http.status, .ok)
         XCTAssertNoThrow(try response.content.syncDecode(CreateProtectedModel.self))
     }
+    
+    func testCannotCacheModelInNoProvider() throws {
+        
+        try makeApp(makeProvider: false)
+        _ = try NoProtectedModel().save(on: conn).wait()
+        
+        router.protected(NoProtectedModel.self, for: [.read]).get("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
+            return try request.requireControllable(NoProtectedModel.self)
+        }
+        
+        let response = try waitResponse(.GET, url: "/1")
+        XCTAssertEqual(response.http.status, .internalServerError)
+        print(response.http.body)
+    }
+    
+    func testCanThrowOriginalError() throws {
+        
+        try makeApp()
+        _ = try BadRequestModel().save(on: conn).wait()
+        
+        router.protected(NoProtectedModel.self, for: [.read]).get("/", NoProtectedModel.parameter) { request -> NoProtectedModel in
+            return try request.requireControllable(NoProtectedModel.self)
+        }
+        
+        router.protected(BadRequestModel.self, for: [.read]).get("/br", BadRequestModel.parameter) { request -> BadRequestModel in
+            return try request.requireControllable(BadRequestModel.self)
+        }
+        
+        var response = try waitResponse(.GET, url: "/1")
+        XCTAssertEqual(response.http.status, .notFound)
+        
+        response = try waitResponse(.GET, url: "/br/1")
+        XCTAssertEqual(response.http.status, .badRequest)
+    }
 
     // MARK: - Helper
 
-    private func makeApp() throws {
+    private func makeApp(makeProvider: Bool = true) throws {
         let config = Config.default()
         let environment = try Environment.detect()
         var services = Services.default()
 
-        try services.register(HotSodaProvider())
+        if makeProvider {
+            try services.register(HotSodaProvider())
+        }
         try services.register(FluentSQLiteProvider())
 
         let sqlite = try SQLiteDatabase(storage: .memory)
@@ -139,6 +175,7 @@ final class AbilityProtectedMiddlewareTests: XCTestCase {
         migrations.add(model: AllProtectedModel.self, database: .sqlite)
         migrations.add(model: NoProtectedModel.self, database: .sqlite)
         migrations.add(model: CreateProtectedModel.self, database: .sqlite)
+        migrations.add(model: BadRequestModel.self, database: .sqlite)
         services.register(migrations)
 
         self.app = try Application(config: config, environment: environment, services: services)
@@ -188,6 +225,15 @@ private final class CreateProtectedModel: TestModel {
 
     static func canCreate(on request: Request) throws -> Future<Void> {
         throw HotSodaError(abilityType: .create)
+    }
+}
+
+private final class BadRequestModel: TestModel {
+    var id: Int?
+    var content: String = ""
+    
+    func canRead(on request: Request) throws -> Future<BadRequestModel> {
+        throw Abort(.badRequest)
     }
 }
 
